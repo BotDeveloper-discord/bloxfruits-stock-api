@@ -13,7 +13,7 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true, parameterLimit: 50000 }));
 
 // Define the port and URL for the web scraping
-const port: number = process.env.PORT || 3300;
+const port: number = parseInt(process.env.PORT as string, 10) || 3300;  // Fixed here
 const url: string = "https://blox-fruits.fandom.com/wiki/Blox_Fruits_%22Stock%22";
 
 // Fruit object interface for structuring data
