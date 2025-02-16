@@ -4,40 +4,31 @@ import axios from "axios";
 import cheerio from "cheerio";
 import bodyParser from "body-parser";
 
-// Create the app instance
+// Initialize the express app
 const app = express();
 
-// Middleware for parsing JSON and URL-encoded data
+// Set up middleware
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(cors());
-app.use(
-  bodyParser.urlencoded({
-    limit: "50mb",
-    extended: true,
-    parameterLimit: 50000,
-  })
-);
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true, parameterLimit: 50000 }));
 
-// Dynamic port assignment for Render
-const port: number = process.env.PORT ? parseInt(process.env.PORT) : 3300;
-
-// URL to scrape the data from
+// Define the port and URL for the web scraping
+const port: number = process.env.PORT || 3300;
 const url: string = "https://blox-fruits.fandom.com/wiki/Blox_Fruits_%22Stock%22";
 
-// Interface for the fruit data
+// Fruit object interface for structuring data
 interface FruitObj {
     name: string;
     price: number;
 }
 
-// Function to remove duplicate fruit names
+// Helper function to remove duplicates from an array
 const removeDuplicateItems = (arr: string[]): string[] => {
     const uniqueFruitsSet: Set<string> = new Set(arr);
-    const uniqueFruitsArr: string[] = [...uniqueFruitsSet];
-    return uniqueFruitsArr;
+    return [...uniqueFruitsSet];
 }
 
-// Function to get the fruit names
+// Function to fetch fruit names based on the stock element type
 const getFruits = (typeStockElement: string, res: Response): Promise<string[]> => {
     return axios(url).then(result => {
         const data = result.data;
@@ -49,17 +40,15 @@ const getFruits = (typeStockElement: string, res: Response): Promise<string[]> =
             toRemoveDuplicateFruits.push(getFruitName);
         });
 
-        const fruitNames: string[] = removeDuplicateItems(toRemoveDuplicateFruits);
-
-        return fruitNames;
-    }).catch (error => {
+        return removeDuplicateItems(toRemoveDuplicateFruits);
+    }).catch(error => {
         console.log(error);
         res.status(500).json();
         return [];
     });
 }
 
-// Function to get the fruit prices
+// Function to fetch fruit prices based on the stock element type
 const getPriceFruits = (typeStockElement: string, res: Response): Promise<string[]> => {
     return axios(url).then(result => {
         const data = result.data;
@@ -67,20 +56,19 @@ const getPriceFruits = (typeStockElement: string, res: Response): Promise<string
         const toRemoveDuplicatePrice: string[] = [];
 
         $(typeStockElement, data).each((i, ele) => {
-            const getFruitName: any = $(ele).find("span").last().text();
-            toRemoveDuplicatePrice.push(getFruitName);
+            const getFruitPrice: any = $(ele).find("span").last().text();
+            toRemoveDuplicatePrice.push(getFruitPrice);
         });
 
-        const fruitPrices = removeDuplicateItems(toRemoveDuplicatePrice);
-        return fruitPrices;
-    }).catch (error => {
+        return removeDuplicateItems(toRemoveDuplicatePrice);
+    }).catch(error => {
         console.log(error);
         res.status(500).json();
         return [];
     });
 }
 
-// Route to get the current stock
+// Route to fetch current stock
 app.get("/v1/currentstock", async (req: Request, res: Response) => {
     const currentStockElement: string = "#mw-customcollapsible-current figure > figcaption > center";
     const fruitNames = await getFruits(currentStockElement, res);
@@ -91,28 +79,35 @@ app.get("/v1/currentstock", async (req: Request, res: Response) => {
         fruitsJson.push({
             name: fruitNames[i],
             price: parseFloat(fruitPrices[i].replace(/,/g, '')),
-        })
+        });
     }
 
     res.status(200).json(fruitsJson);
 });
 
-// Route to get the last stock
+// Route to fetch last stock
 app.get("/v1/laststock", async (req: Request, res: Response) => {
     const lastStockElement: string = "#mw-customcollapsible-last figure > figcaption > center";
     const fruitNames = await getFruits(lastStockElement, res);
     const fruitPrices = await getPriceFruits(lastStockElement, res);
     const fruitsJson: FruitObj[] = [];
+
     for (let i = 0; i < fruitNames.length; i++) {
         fruitsJson.push({
             name: fruitNames[i],
-            price: parseFloat(fruitPrices[i].replace(/,/g, "")),
-        })
+            price: parseFloat(fruitPrices[i].replace(/,/g, '')),
+        });
     }
+
     res.status(200).json(fruitsJson);
 });
 
-// Start the server on the dynamic Render port
+// Default route to check if the server is up
+app.get("/", (req: Request, res: Response) => {
+    res.send("API is running smoothly!");
+});
+
+// Start the server
 app.listen(port, () => {
-    console.log(`Server started on port ${port}`);
+    console.log(`Server is running on port ${port}`);
 });
