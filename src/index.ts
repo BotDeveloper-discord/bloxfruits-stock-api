@@ -4,7 +4,10 @@ import axios from "axios";
 import cheerio from "cheerio";
 import bodyParser from "body-parser";
 
+// Create the app instance
 const app = express();
+
+// Middleware for parsing JSON and URL-encoded data
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(cors());
 app.use(
@@ -15,20 +18,26 @@ app.use(
   })
 );
 
-const port: number = 3300;
+// Dynamic port assignment for Render
+const port: number = process.env.PORT ? parseInt(process.env.PORT) : 3300;
+
+// URL to scrape the data from
 const url: string = "https://blox-fruits.fandom.com/wiki/Blox_Fruits_%22Stock%22";
 
+// Interface for the fruit data
 interface FruitObj {
     name: string;
     price: number;
 }
 
+// Function to remove duplicate fruit names
 const removeDuplicateItems = (arr: string[]): string[] => {
     const uniqueFruitsSet: Set<string> = new Set(arr);
     const uniqueFruitsArr: string[] = [...uniqueFruitsSet];
     return uniqueFruitsArr;
 }
 
+// Function to get the fruit names
 const getFruits = (typeStockElement: string, res: Response): Promise<string[]> => {
     return axios(url).then(result => {
         const data = result.data;
@@ -50,6 +59,7 @@ const getFruits = (typeStockElement: string, res: Response): Promise<string[]> =
     });
 }
 
+// Function to get the fruit prices
 const getPriceFruits = (typeStockElement: string, res: Response): Promise<string[]> => {
     return axios(url).then(result => {
         const data = result.data;
@@ -70,6 +80,7 @@ const getPriceFruits = (typeStockElement: string, res: Response): Promise<string
     });
 }
 
+// Route to get the current stock
 app.get("/v1/currentstock", async (req: Request, res: Response) => {
     const currentStockElement: string = "#mw-customcollapsible-current figure > figcaption > center";
     const fruitNames = await getFruits(currentStockElement, res);
@@ -86,6 +97,7 @@ app.get("/v1/currentstock", async (req: Request, res: Response) => {
     res.status(200).json(fruitsJson);
 });
 
+// Route to get the last stock
 app.get("/v1/laststock", async (req: Request, res: Response) => {
     const lastStockElement: string = "#mw-customcollapsible-last figure > figcaption > center";
     const fruitNames = await getFruits(lastStockElement, res);
@@ -100,6 +112,7 @@ app.get("/v1/laststock", async (req: Request, res: Response) => {
     res.status(200).json(fruitsJson);
 });
 
+// Start the server on the dynamic Render port
 app.listen(port, () => {
-    console.log("Server đã khởi động ở port", port);
+    console.log(`Server started on port ${port}`);
 });
